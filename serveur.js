@@ -1,4 +1,4 @@
-// serveur.js - Version simplifiée et robuste
+// serveur.js - Version Finale avec Heartbeat de Débogage
 
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
@@ -6,6 +6,7 @@ const { open } = require('sqlite');
 const crypto = require('crypto');
 const cors = require('cors');
 
+// --- Configuration ---
 const ADMIN_SECRET_KEY = 'zeoirbgpzerugbzpierubg208730'; 
 const DB_FILE = '/data/cles.db';
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.set('trust proxy', true);
 
+// --- Initialisation de la base de données ---
 async function initialiserDB() {
     const db = await open({ filename: DB_FILE, driver: sqlite3.Database });
     console.log("Vérification de la structure de la base de données...");
@@ -33,9 +35,8 @@ async function initialiserDB() {
     console.log("Base de données prête.");
 }
 
-// La route de vérification ne change pas
+// --- Route publique pour la validation des clés ---
 app.get('/verifier_cle', async (req, res) => {
-    // ... (gardez la même logique de vérification par empreinte que précédemment)
     const { cle: cleUtilisateur, fingerprint: empreinteAppareil } = req.query;
     if (!cleUtilisateur || !empreinteAppareil) {
         return res.status(400).json({ status: 'erreur', message: 'Clé ou empreinte d\'appareil non fournie.' });
@@ -65,6 +66,7 @@ app.get('/verifier_cle', async (req, res) => {
     }
 });
 
+// --- Middleware d'administration ---
 const checkAdmin = (req, res, next) => {
     if (req.headers['x-admin-key'] === ADMIN_SECRET_KEY) {
         next();
@@ -73,10 +75,9 @@ const checkAdmin = (req, res, next) => {
     }
 };
 
-// --- NOUVELLE LOGIQUE SIMPLIFIÉE ---
+// --- Routes d'administration (utilisées par le bot) ---
 
-// 1. '/admin/add' est redevenu simple comme dans votre version originale.
-// Il ne fait que créer une clé vierge et la renvoyer.
+// Route simple pour créer une clé "vierge"
 app.post('/admin/add', checkAdmin, async (req, res) => {
     const db = await open({ filename: DB_FILE, driver: sqlite3.Database });
     try {
@@ -94,8 +95,7 @@ app.post('/admin/add', checkAdmin, async (req, res) => {
     }
 });
 
-// 2. On crée une NOUVELLE route '/admin/link' juste pour lier une clé à un utilisateur.
-// C'est une opération simple et séparée.
+// Route simple pour lier une clé existante à un utilisateur Discord
 app.post('/admin/link', checkAdmin, async (req, res) => {
     const { key, discordUserId, discordUsername } = req.body;
     if (!key || !discordUserId || !discordUsername) {
@@ -116,12 +116,57 @@ app.post('/admin/link', checkAdmin, async (req, res) => {
     }
 });
 
-// Les autres routes admin ne changent pas
-app.get('/admin/list', checkAdmin, async (req, res) => { /* ... reste inchangée ... */ });
-app.post('/admin/reset_devices', checkAdmin, async (req, res) => { /* ... reste inchangée ... */ });
+// Route pour lister toutes les clés
+app.get('/admin/list', checkAdmin, async (req, res) => {
+    const db = await open({ filename: DB_FILE, driver: sqlite3.Database });
+    try {
+        const cles = await db.all('SELECT * FROM cles');
+        res.json(cles);
+    } catch(e) {
+        console.error("Erreur /admin/list :", e);
+        res.status(500).json({ error: "Erreur lors de la récupération des clés." });
+    } finally {
+        await db.close();
+    }
+});
 
+// Route pour réinitialiser les appareils d'une clé
+app.post('/admin/reset_devices', checkAdmin, async (req, res) => {
+    const { key } = req.body;
+    if (!key) return res.status(400).json({ error: "La clé est requise." });
+
+    const db = await open({ filename: DB_FILE, driver: sqlite3.Database });
+    try {
+        const resultat = await db.run('UPDATE cles SET appareils_actifs = ? WHERE cle_unique = ?', ['[]', key]);
+        if (resultat.changes > 0) {
+            res.json({ success: true, message: `Les appareils pour la clé ${key} ont été réinitialisés.` });
+        } else {
+            res.status(404).json({ error: 'Clé non trouvée.' });
+        }
+    } catch (e) {
+        console.error("Erreur /admin/reset_devices :", e);
+        res.status(500).json({ error: "Erreur lors de la réinitialisation." });
+    } finally {
+        await db.close();
+    }
+});
+
+
+// --- AJOUT DU HEARTBEAT DE DÉBOGAGE ---
+// Ce code va écrire un message dans les logs toutes les 10 secondes
+// pour prouver que l'application est bien en cours d'exécution et n'a pas crashé.
+setInterval(() => {
+    console.log(`[Heartbeat] Le serveur est en vie à ${new Date().toISOString()}`);
+}, 10000);
+// --- FIN DU HEARTBEAT ---
+
+
+// --- Démarrage du serveur ---
 initialiserDB().then(() => {
     app.listen(PORT, () => {
         console.log(`🚀 Serveur Propulse démarré sur le port ${PORT}`);
     });
+}).catch(err => {
+    console.error("Échec de l'initialisation de la base de données :", err);
+    process.exit(1); // Arrête le processus si la DB ne peut pas être initialisée
 });
