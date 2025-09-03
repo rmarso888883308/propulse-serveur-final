@@ -9,7 +9,11 @@ const cors = require('cors');
 // --- Configuration ---
 // !! IMPORTANT : Utilisez une clé complexe et gardez-la secrète.
 // !! Elle doit être identique dans le fichier .env de votre bot.
+<<<<<<< HEAD
 const ADMIN_SECRET_KEY = 'zeoirbgpzerugbzpierubg208730'; 
+=======
+const ADMIN_SECRET_KEY = 'CHANGER_CE_MOT_DE_PASSE_ULTRA_SECRET'; 
+>>>>>>> 36b9d6f320798c9f40b1df094e72f53b5212b8a8
 const DB_FILE = '/data/cles.db'; // Chemin persistant sur Fly.io
 const PORT = process.env.PORT || 3000;
 const MAX_DEVICES = 2; // Limite de 2 appareils par clé
