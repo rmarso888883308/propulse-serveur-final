@@ -1,8 +1,0 @@
-# Dépendances
-/node_modules
-
-# Fichiers système
-.DS_Store
-
-# Fichiers d'environnement (si vous en utilisez un jour)
-.env
