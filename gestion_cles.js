@@ -1,7 +1,7 @@
 // gestion_cles.js - La "télécommande" pour le serveur distant
 
 const ADMIN_SECRET_KEY = 'CHANGER_CE_MOT_DE_PASSE'; // !! METTEZ LE MÊME MOT DE PASSE QUE DANS SERVEUR.JS !!
-const SERVER_URL = 'https://VOTRE_FUTURE_URL.fly.dev'; // !! METTRE À JOUR APRÈS LE DÉPLOIEMENT !!
+const SERVER_URL = 'https://propulse-serveur-final.fly.dev'; // !! METTRE À JOUR APRÈS LE DÉPLOIEMENT !!
 
 async function fetchAdmin(endpoint, options = {}) {
     const headers = { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_SECRET_KEY, ...options.headers, };
